@@ -134,3 +134,27 @@ const patchDoctor = async(req,res,next) => {
         next(error);
     }
 }
+
+const getAllAppointment = async(req,res,next) => {
+    try {
+        const {id} = req.params;
+        const appointments = await Appointment.find({
+            doctor:id
+        })
+        .populate("patient" , "name,age,phone,gender")
+        .sort({
+            appointmentDate:1,
+            appointmentTime:1
+        });
+        res.json({
+            success:true,
+            count:appointments.length,
+            data:appointments
+        });
+
+    } catch (error) {
+        next(error)l;
+    }
+};
+
+module.exports = {createDoctor , getDoctors , getSingleDoctor , updateDoctor , statusDoctor ,getAllAppointment}; 
