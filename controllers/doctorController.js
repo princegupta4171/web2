@@ -108,9 +108,9 @@ const updateDoctor =async(req,res,next) =>{
 };
 
 
-const patchDoctor = async(req,res,next) => {
+const statusDoctor = async(req,res,next) => {
     try{
-        const{!isActive} = req.body;
+        const{isActive} = req.body;
         const doctor = await Doctor.findByIdAndUpdate(
             req.params.id,
             {isActive},
@@ -153,8 +153,8 @@ const getAllAppointment = async(req,res,next) => {
         });
 
     } catch (error) {
-        next(error)l;
+        next(error);
     }
 };
 
-module.exports = {createDoctor , getDoctors , getSingleDoctor , updateDoctor , statusDoctor ,getAllAppointment}; 
+module.exports = {createDoctor , getDoctors , getSingleDoctor , updateDoctor ,getAllAppointment , statusDoctor}; 
