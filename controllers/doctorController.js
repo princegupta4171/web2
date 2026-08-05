@@ -6,7 +6,7 @@ const createDoctor = async(req,res,next) =>{
         const doctor = await Doctor.create(req.body);
         res.status(201).json({
             success:true,
-            message:"DOctor registered succesfully",
+            message:"Doctor registered succesfully",
             data:doctor
         })
     }catch(err){
