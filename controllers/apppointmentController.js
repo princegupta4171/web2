@@ -314,3 +314,24 @@ const getAvailableSlotsorDoctor = async (req, res, next) => {
         next(error);
     }
 }
+
+const getSingleAppointmentDetails = async (req,res,next) => {
+    try {
+        const{id} = req.params;
+        const appointment = await Appointment.findById(id)
+            .populate("doctor", "name specialization phone consultationFee")
+            .populate("patient", "name age  phone gender");
+        if(!appointment){
+            return res.status(403).json({
+                success:false,
+                message:"appointment not found"
+            });
+        }
+        res.json({
+            success:true,
+            data:appointment
+        });
+    } catch (error) {
+        
+    }    
+}
