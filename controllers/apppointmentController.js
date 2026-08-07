@@ -165,9 +165,98 @@ const bookAppointment = async(req,res,next) => {
 
 const getAllApointments = async(req,res,next) => {
     try {
+        const {doctorId , patientId ,status ,date} = req.query;
+        const filter = {};
+        if(doctorId){
+            filter.doctor = doctorId;
+        }
+        if(patientId){
+            filter.patientId = patientId;
+        }
+        if(status){
+            filter.staus = status;
+        }
+        if(date){
+            filter.appointmentDate = normalizeDate(date);
+
+        }
+
+        const appointment = await Appointment.find(filter)
+        .populate("doctor","name specilization  phone  consultationFee")
+        .populate("patient"  , "name age phone gender")
+        .sort({appointmentDate:1,appointmentTime:1 });
+
+        res.json({
+            success:true,
+            count:appointments.length,
+            data:appointments
+
+        });
+      
         
         
     } catch (error) {
         next(error);
     }
 };
+
+const getTodayAppointments = async(req,res,next) => {
+    try {
+        const today = normalizeDate(new date());
+        const appointment = await Appointment.find({
+            appointmentDate : todaydate})
+        .populate("doctor" , "name phone consultationFee")
+        .populate("patient" , "name age phone gender")
+        .sort({
+            appointmentTime:1
+        
+        })
+
+        res.json({
+            success:true,
+            date:today,
+            count:appointments.length,
+            data:appointments
+
+        })
+            
+
+    } catch (error) {
+        next(error);
+        
+    }
+
+};
+
+
+const getAvailableSlotsorDoctor = async(req,res,next) => {
+    try {
+        const{doctorId} = req.params;
+        const{date} = req.query;
+        if(!date){
+            return res.status(400).json({
+                success:false,
+                message:"date is required"
+            });
+        }
+        const doctor = await Doctor.findById(doctorId);
+        if(!doctor || !doctor.isActive){
+            return res.status(400).json({
+                success:false,
+                message:"active doctor not found"
+            });
+        }
+
+        const selectedDate = normalizeDate(date);
+        const selectedDay = getDayName(selectedDate);
+        if(!doctor.availableDays.includes(selectedDay)){
+            return res.status(400).json({
+                success:false,
+                message:`doctor is unavailable on ${selectedDay}`,
+                date = []
+            });
+        }
+    } catch (error) {
+        next(error);
+    }
+}
