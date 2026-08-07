@@ -256,6 +256,37 @@ const getAvailableSlotsorDoctor = async(req,res,next) => {
                 date = []
             });
         }
+
+        const bookedAppointments = await Appointment.find({
+            doctor:doctorId,
+            appointmentDate:selectedDate,
+            status:{
+                $ne:"cancelled"            
+            }}).select("AppointmentTime");
+            
+        const bookedTimes = bookedAppointments.map{
+            (appointment) => appointment.appointmentTime
+        };
+
+        const slot = {};
+        let {startHour , startMinute} = doctor.startTime
+            .split(":")
+            .map(Number);
+        let{endHour , endMinute} = doctor.endTime
+            .split(":")
+            .map(Number);
+        let currentMinutes = startHour * 60 + startMinute ;
+        
+        let endMinutes = endHour * 60 + endMinute;
+
+        while(currentMinutes < endMinutes){
+            const hour = Math.floor(currentMinutes % 60);
+            const minute = currentMinutes % 60;
+            const formattedTime = `${}`
+            
+        })
+        
+
     } catch (error) {
         next(error);
     }
