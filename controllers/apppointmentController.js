@@ -296,6 +296,19 @@ const getAvailableSlotsorDoctor = async (req, res, next) => {
 
         }
 
+        res.json({
+            success: true,
+            doctor:{
+                id : doctor.name,
+                slotDuration : doctor.slotDuration,
+                name : doctor.name             
+
+            },
+            data : selectedDate,
+            data:slots
+
+        });
+
 
     } catch (error) {
         next(error);
