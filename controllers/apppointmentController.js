@@ -386,3 +386,6 @@ const updatePaymentStatus = async (req, res, next) => {
         next(error);
     }
 };
+
+
+module.exports = {bookAppointment , getAllAppointments , getTodayAppointments, getAvailableSlotsforDoctor , updateAppointmentStatus , updatePaymentStatus ,getSingleAppointmentDetails};
