@@ -2,75 +2,73 @@ const Appointment = require("../models/Appointment");
 const Doctor = require("../models/Doctor");
 const Patient = require("../models/Patient");
 
-const genarateAppointmentNumber = async (req, res, next) => {
-    const datePart = Date.now().toString.slice(-6);
-    const randomPart = Math.floor(100 + Math.random() * 900);
+const generateAppointmentNumber = () => {
+    const datePart = Date.now().toString().slice(-6);
+    // console.log(Date.now().toString());
+    const randomPart = Math.floor(100 + Math.random() * 100);
+    // console.log(randomPart);
     return `APT-${datePart}-${randomPart}`;
-
 };
+
+console.log(generateAppointmentNumber());
 
 const getDayName = (date) => {
     return new Intl.DateTimeFormat("en-US", {
         weekday: "long"
     }).format(date);
-}
+};
 
 const normalizeDate = (dateValue) => {
     const date = new Date(dateValue);
     date.setHours(0, 0, 0, 0);
     return date;
-}
+};
 
 const bookAppointment = async (req, res, next) => {
     try {
         const {
-            doctorId, patientName, phone, email, age, gender,
-            address, appointmentDate, appointmentTime, reason, symptoms, bookingType
+            doctorId, patientName, phone, email, age, gender, address, appointmentDate, appointmentTime, reason, symptoms, bookingType
         } = req.body;
-        if (!doctorId || !patientName || !phone || age === undefined || !gender || appointmentDate || !appointmentTime || !reason) {
+
+        if (!doctorId || !patientName || !phone || age === undefined || !gender || !appointmentDate || !appointmentTime || !reason) {
             return res.status(400).json({
                 success: false,
-                message: "All fields are required"
+                message: "All Fields are required"
             });
         }
-
         const doctor = await Doctor.findById(doctorId);
         if (!doctor) {
             return res.status(400).json({
                 success: false,
-                message: "invalid doctor id"
+                message: "Invalid Doctor ID"
             });
-
         }
         if (!doctor.isActive) {
             return res.status(400).json({
                 success: false,
-                message: "Doctor is currently unavailable"
-            });
+                message: "Doctor is currently Unavailable"
+            })
         }
-
         const selectedDate = normalizeDate(appointmentDate);
         const today = normalizeDate(new Date());
         if (selectedDate < today) {
             return res.status(400).json({
                 success: false,
-                message: "past date appointment is not allowed"
+                message: "Past Date appointment is not allowed"
             });
-
         }
-
         const selectedDay = getDayName(selectedDate);
         if (!doctor.availableDays.includes(selectedDay)) {
             return res.status(400).json({
                 success: false,
-                message: `dovtor is not acvailableon ${selectedDay}`
-            });
+                message: `Doctor is not available on ${selectedDay}`
+            })
         }
 
-        if (appointmentTime < doctor.startTime || appointmentTime > doctor.endTime) {
+        if (appointmentTime < doctor.startTime || appointmentTime >= doctor.endTime) {
             return res.status(400).json({
                 success: false,
-                message: `appointment tie must be between ${doctor.startTime} and ${doctor.endTime}`
+                message: `Appointment Time must be between ${doctor.startTime} and ${doctor.endTime}`
             });
         }
 
@@ -79,15 +77,14 @@ const bookAppointment = async (req, res, next) => {
             appointmentDate: selectedDate,
             appointmentTime,
             status: {
-                $ne: "cancelled"
+                $ne: "Cancelled"
             }
-
         });
 
         if (existingAppointment) {
-            return res.status(400).json({
+            return res.status(409).json({
                 success: false,
-                message: "this appointment slot is already booked"
+                message: "This appointment slot is already booked"
             });
         }
 
@@ -96,9 +93,8 @@ const bookAppointment = async (req, res, next) => {
             name: {
                 $regex: `^${patientName}`,
                 $options: "i"
-
             }
-        })
+        });
 
         if (!patient) {
             patient = await Patient.create({
@@ -107,11 +103,12 @@ const bookAppointment = async (req, res, next) => {
                 email,
                 age,
                 gender,
-                address,
+                address
             });
-        } else {
+        }
+        else {
             patient.age = age;
-            patient.gender = gender;
+            patient.gender = gender
             if (email) {
                 patient.email = email;
             }
@@ -119,22 +116,20 @@ const bookAppointment = async (req, res, next) => {
                 patient.address = address;
             }
             await patient.save();
-
         }
 
         const appointmentCount = await Appointment.countDocuments({
-            docto: doctor.Id,
+            doctor: doctorId,
             appointmentDate: selectedDate,
             status: {
-                $ne: "cancelled"
+                $ne: "Cancelled"
             }
-
         });
 
         const tokenNumber = appointmentCount + 1;
 
         const appointment = await Appointment.create({
-            appointmentNumber: await genarateAppointmentNumber(),
+            appointmentNumber: generateAppointmentNumber(),
             doctor: doctorId,
             patient: patient._id,
             appointmentDate: selectedDate,
@@ -142,28 +137,28 @@ const bookAppointment = async (req, res, next) => {
             reason,
             symptoms: symptoms || [],
             bookingType: bookingType || "Online",
-            consultationFee: doctor.consultationfees,
+            consultationFee: doctor.consultationFee,
             tokenNumber
         });
 
-        const populatedAppointment = await Appoinment.findById(appointment._id)
-            .populate("doctor", "name,specilization , cosnultationFee ,roomNumber")
-            .populate("patient", "name , age , gender , phone");
+        const populatedAppointment = await Appointment.findById(appointment._id)
+            .populate("doctor", "name specialization consultationFee roomNumber")
+            .populate("patient", "name age gender phone");
 
         res.status(201).json({
             success: true,
-            message: "Appointment booked successfully",
+            message: "Appointment Booked Successfully",
             data: populatedAppointment
-        })
+        });
 
 
     } catch (error) {
         next(error);
     }
-}
+};
 
 
-const getAllApointments = async (req, res, next) => {
+const getAllAppointments = async (req, res, next) => {
     try {
         const { doctorId, patientId, status, date } = req.query;
         const filter = {};
@@ -171,18 +166,17 @@ const getAllApointments = async (req, res, next) => {
             filter.doctor = doctorId;
         }
         if (patientId) {
-            filter.patientId = patientId;
+            filter.patient = patientId;
         }
         if (status) {
-            filter.staus = status;
+            filter.status = status;
         }
         if (date) {
             filter.appointmentDate = normalizeDate(date);
-
         }
 
-        const appointment = await Appointment.find(filter)
-            .populate("doctor", "name specilization  phone  consultationFee")
+        const appointments = await Appointment.find(filter)
+            .populate("doctor", "name specialization phone consultationFee")
             .populate("patient", "name age phone gender")
             .sort({ appointmentDate: 1, appointmentTime: 1 });
 
@@ -190,10 +184,7 @@ const getAllApointments = async (req, res, next) => {
             success: true,
             count: appointments.length,
             data: appointments
-
         });
-
-
 
     } catch (error) {
         next(error);
@@ -202,49 +193,41 @@ const getAllApointments = async (req, res, next) => {
 
 const getTodayAppointments = async (req, res, next) => {
     try {
-        const today = normalizeDate(new date());
-        const appointment = await Appointment.find({
-            appointmentDate: todaydate
-        })
+        const today = normalizeDate(new Date());
+        const appointments = await Appointment.find({ appointmentDate: today })
             .populate("doctor", "name phone consultationFee")
             .populate("patient", "name age phone gender")
             .sort({
                 appointmentTime: 1
-
-            })
+            });
 
         res.json({
             success: true,
             date: today,
             count: appointments.length,
             data: appointments
-
         })
-
 
     } catch (error) {
         next(error);
-
     }
-
 };
 
-
-const getAvailableSlotsorDoctor = async (req, res, next) => {
+const getAvailableSlotsforDoctor = async (req, res, next) => {
     try {
         const { doctorId } = req.params;
         const { date } = req.query;
         if (!date) {
             return res.status(400).json({
                 success: false,
-                message: "date is required"
+                message: "Date is required"
             });
         }
         const doctor = await Doctor.findById(doctorId);
         if (!doctor || !doctor.isActive) {
             return res.status(400).json({
                 success: false,
-                message: "active doctor not found"
+                message: "Active Doctor not found"
             });
         }
 
@@ -253,85 +236,153 @@ const getAvailableSlotsorDoctor = async (req, res, next) => {
         if (!doctor.availableDays.includes(selectedDay)) {
             return res.status(400).json({
                 success: false,
-                message: `doctor is unavailable on ${selectedDay}`,
-                date =[]
-            });
+                message: `Doctor is unavailable on ${selectedDay}`,
+                data: []
+            })
         }
 
         const bookedAppointments = await Appointment.find({
-            doctor: doctorId,
+            doctor: doctor._id,
             appointmentDate: selectedDate,
             status: {
-                $ne: "cancelled"
+                $ne: "Cancelled"
             }
-        }).select("appointmentTime");
+        }).select("appoitmentTime");
 
         const bookedTimes = bookedAppointments.map(
             (appointment) => appointment.appointmentTime
         );
 
-        const slot = {};
-        let { startHour, startMinute } = doctor.startTime
+        const slots = [];
+        let [startHour, startMinute] = doctor.startTime
             .split(":")
             .map(Number);
-        let { endHour, endMinute } = doctor.endTime
+        let [endHour, endMinute] = doctor.endTime
             .split(":")
             .map(Number);
-        let currentMinutes = startHour * 60 + startMinute;
+        let currentMinutes = startHour * 60 + startMinute; // 690
+        let endMinutes = endHour * 60 + endMinute; // 810
 
-        let endMinutes = endHour * 60 + endMinute;
-
-        while (currentMinutes < endMinutes) {
-            const hour = Math.floor(currentMinutes % 60);
-            const minute = currentMinutes % 60;
-            const formattedTime = `${Sring(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
-
-            slot.push({
+        while (currentMinutes < endMinutes) {  // 735
+            const hour = Math.floor(currentMinutes / 60); // 12
+            const minute = currentMinutes % 60;  // 15
+            const formattedTime = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+            // 12:00
+            slots.push({
                 time: formattedTime,
-                available: !bookedTimes.includes(formattedTime)
-
+                available: !bookedTimes.include(formattedTime)
             });
-            currentMinutes += doctor.slotDuration;
-
-
+            currentMinutes = currentMinutes + doctor.slotDuration;
         }
 
         res.json({
             success: true,
-            doctor:{
-                id : doctor.name,
-                slotDuration : doctor.slotDuration,
-                name : doctor.name             
-
+            doctor: {
+                id: doctor._id,
+                name: doctor.name,
+                slotDuration: doctor.slotDuration
             },
-            data : selectedDate,
-            data:slots
-
+            date: selectedDate,
+            data: slots
         });
-
-
     } catch (error) {
         next(error);
     }
-}
+};
 
-const getSingleAppointmentDetails = async (req,res,next) => {
+const getSingleAppointmentDetails = async (req, res, next) => {
     try {
-        const{id} = req.params;
+        const { id } = req.params;
         const appointment = await Appointment.findById(id)
             .populate("doctor", "name specialization phone consultationFee")
-            .populate("patient", "name age  phone gender");
-        if(!appointment){
+            .populate("patient", "name age phone gender");
+        if (!appointment) {
             return res.status(403).json({
-                success:false,
-                message:"appointment not found"
+                success: false,
+                message: "Appointment not found"
             });
         }
         res.json({
+            success: true,
+            data: appointment
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const updateAppointmentStatus = async (req, res, next) => {
+    try {
+        const { status } = req.body
+        const allowedStatuses = ["Pending", "Confirmed", "Checked-In", "Completed", "Cancelled"];
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid Appointment Status"
+            });
+        }
+        const appointment = await Appointment.findById(req.params.id);
+        if (!appointment) {
+            return res.status(403).json({
+                success: false,
+                message: "Appointment Not Found"
+            });
+        }
+        appointment.status = status;
+        await appointment.save();
+
+        if (status === "Completed") {
+            await Patient.findByIdAndUpdate(appointment.patient, {
+                $inc: {
+                    totalVisits: 1
+                },
+                lastVisit: new Date()
+            });
+        }
+
+        const updatedAppointment = await Appointment.find(req.params.id)
+            .populate("doctor", "name specialization")
+            .populate("patient", "name phone totalVisits");
+
+        res.json({
+            success: true,
+            message: `Appointment Status changed to ${status}`,
+            data: updatedAppointment
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const updatePaymentStatus = async (req, res, next) => {
+    try {
+        const { paymentStatus } = req.body;
+        const allowedStatuses = ["Pending", "Paid", "Refunded"];
+        if (!allowedStatuses.includes(paymentStatus)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid Payment Status"
+            });
+        }
+
+        const appointment = await Appointment.findByIdAndUpdate(req.params.id,
+            { paymentStatus },
+            { new: true, runValidators: true }
+        );
+
+        if (!appointment) {
+            return res.status(403).json({
+                success: false,
+                message: "Appointment Not Found"
+            });
+        }
+
+        res.json({
             success:true,
+            message:"Payment Status Updated",
             data:appointment
         });
     } catch (error) {
-        
-    }    
-}
+        next(error);
+    }
+};
