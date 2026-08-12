@@ -1,5 +1,5 @@
 const Doctor = require("../models/Doctor");
-const Appointment = require("..models/Appointment");
+const Appointment = require("../models/Appointment");
 
 const createDoctor = async(req,res,next) =>{
     try{
@@ -50,7 +50,7 @@ const getDoctors =async(req,res,next) =>{
         const doctors =(await Doctor.find(filter)).sort({createdAt : -1});
         res.json({
             success:true,
-            count: doctor.length,
+            count: doctors.length,
             data:doctors
         });
     }catch(err){
@@ -61,10 +61,10 @@ const getDoctors =async(req,res,next) =>{
 
 const getSingleDoctor =async(req,res,next) =>{
     try{
-        const{id} = req.params.id;
+        const { id } = req.params;
         const doctor = await Doctor.findById(id);
         if(!doctor){
-            return res.status(403).json({
+            return res.status(404).json({
                 success:false,
                 message:"Doctor not found"        
             })
@@ -83,15 +83,15 @@ const updateDoctor =async(req,res,next) =>{
     try {
         const doctor = await Doctor.findByIdAndUpdate(
             req.params.id , 
-            req.bod,
+            req.body,
             {
-                next:true,
+                new:true,
                 runValidators:true
             
             }
         );
         if(!doctor){
-            return res.status(403).json({
+            return res.status(404).json({
                 success:false,
                 message:"Doctor not found"
             });
@@ -115,12 +115,12 @@ const statusDoctor = async(req,res,next) => {
             req.params.id,
             {isActive},
             {
-                next:true,
+                new:true,
                 runValidators:true
             }
         )
         if(!doctor){
-            return res.status(403).json({
+            return res.status(404).json({
                 success:false,
                 message:"Doctor not found"
             });

@@ -22,16 +22,14 @@ const errorHandler = (error , req, res, next) => {
         );
         return res.status(400).json({
             success:false,
-            message:MediaKeyMessageEvent.join(", ")
+            message: messages.join(", ")
         });
-
-        return res.status(500).json({
-            success:false,
-            message:error.message || "internal server error"
-        });
-
-
     }
+
+    return res.status(500).json({
+        success:false,
+        message:error.message || "internal server error"
+    });
 
 };
 
